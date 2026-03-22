@@ -1,10 +1,10 @@
 ## deep differentiable logic gate network implementation
+import itertools
 
 import jax
 import jax.numpy as jnp
 from jax import grad, jit, vmap, random
 
-import itertools
 
 GATES = 16
 
@@ -136,6 +136,8 @@ def predict(params, wires, inp, hard):
         outs_r = jnp.dot(right, active)
         active = gate(outs_l, outs_r, param, hard)
     return active
+
+# TODO Aggregation of Output Neurons
 
 # TODO what is this
 predict_batch = vmap(predict, in_axes=(None, None, 0, None))

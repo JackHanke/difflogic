@@ -1,3 +1,4 @@
+## train ddlgn
 import time
 import optax
 import functools
@@ -14,6 +15,8 @@ from datasets.ttt import get_ttt
 def loss(params, wires, inp, out, hard):
     preds = predict_batch(params, wires, inp, hard)
     return jnp.mean(jnp.square(preds - out))
+
+# TODO CSE
 
 @functools.partial(jit, static_argnums=(4,))
 def update_adamw(params, wires, x, y, opt, opt_state):
