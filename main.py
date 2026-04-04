@@ -2,6 +2,7 @@
 import time
 import optax
 import functools
+from tqdm import tqdm
 
 import jax.numpy as jnp
 from jax import grad, jit, vmap, random
@@ -37,7 +38,6 @@ def update_adamw(params, wires, x, y, opt, opt_state):
     new_params = optax.apply_updates(params, grads)
     return new_params, opt_state
 
-
 def train_adamw(
         x,
         y,
@@ -48,58 +48,27 @@ def train_adamw(
         batch_size: int = 512
     ):
     '''  '''
-    
     opt = optax.chain(
         optax.clip(100.0),
-        optax.adamw(learning_rate=0.05, b1=0.9, b2=0.99, weight_decay=1e-2)
+        # optax.adamw(learning_rate=0.05, b1=0.9, b2=0.99, weight_decay=1e-2)
+        optax.adamw(learning_rate=0.01, b1=0.9, b2=0.99, weight_decay=1e-6)
     )
     opt_state = opt.init(params)
     
     keys = random.split(key, epochs)
-    for (i, key_epoch) in enumerate(keys):
+    prog_bar = tqdm(enumerate(keys), total=len(keys))
+    for (i, key_epoch) in prog_bar:
         key_train, key_accuracy = random.split(key_epoch)
-
-        time_start = time.time()
+        # time_start = time.time()
         params, opt_state = update_adamw(params, wires, x, y, opt, opt_state)
-        time_epoch = time.time() - time_start
+        # time_epoch = time.time() - time_start
+        # print(f"Epoch ({i+1}/{epochs}) in {time_epoch:.3g} s/epoch", end="   \r")
+        if i % 50 == 0:
+            # debug_loss(key_accuracy, params, wires, x, y)
+            train_acc = acc(params, wires, x, y)
+            prog_bar.set_description(f'Acc: {train_acc*100:.2f} %')
 
-        print(f"Epoch ({i+1}/{epochs}) in {time_epoch:.3g} s/epoch", end="   \r")
-        
-        if i % 20 == 0: debug_loss(key_accuracy, params, wires, x, y)
-        # if i % 10000 == 0: debug_params(params)
     return params
-
-def debug_loss(key, params, wires, x, y):
-    print()
-
-    # TODO figure out why he gets the dataset again
-    # x_test, y_test = get_conway()
-    # x_test, y_test = get_ttt()
-
-    # train_loss = loss(params, wires, x, y, False)
-    # test_loss = loss(params, wires, x_test, y_test, False)
-    # test_loss_hard = loss(params, wires, x_test, y_test, True)
-
-    train_acc = acc(params, wires, x, y)
-
-    # preds = predict_batch(params, wires, x_test, False)
-    # preds_hard = predict_batch(params, wires, x_test, True)
-    # print("[", *[f"{x:.3g}" for x in preds[0:5].flatten().tolist()], "]", preds_hard[0:5].flatten(), y_test[0:5].flatten())
-    print(f"train_acc: {train_acc*100:.3f} %")
-    # print(f"train_loss: {train_loss:.3g}", end="; ")
-    # print(f"test_loss: {test_loss:.3g}", end="; ")
-    # print(f"test_loss_hard: {test_loss_hard:.3g}")
-    
-
-def debug_params(params):
-    for i, param in enumerate(params):
-        print("LAYER", i, param.shape)
-        for gate in param.T.tolist():
-            for logic in gate:
-                if logic > 1: print("█ ", end="")
-                elif logic < 0: print("▁ ", end="")
-                else: print("▄ ", end="")
-            print()
 
 if __name__ == "__main__":
     SEED = 379009
@@ -111,7 +80,7 @@ if __name__ == "__main__":
     x, y = get_ttt()
 
     # init network
-    layer_sizes = [18, *([256] * 24), 180]
+    layer_sizes = [18, *([128] * 10), 270]
     params, wires = rand_network(param_key, layer_sizes)
 
     # train model
