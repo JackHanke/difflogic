@@ -45,13 +45,12 @@ def train_adamw(
         params, 
         wires, 
         epochs: int = 3001, 
-        batch_size: int = 512
     ):
     '''  '''
     opt = optax.chain(
         optax.clip(100.0),
-        # optax.adamw(learning_rate=0.05, b1=0.9, b2=0.99, weight_decay=1e-2)
-        optax.adamw(learning_rate=0.01, b1=0.9, b2=0.99, weight_decay=1e-6)
+        optax.adamw(learning_rate=0.05, b1=0.9, b2=0.99, weight_decay=1e-2)
+        # optax.adamw(learning_rate=0.01, b1=0.9, b2=0.99, weight_decay=1e-6)
     )
     opt_state = opt.init(params)
     
@@ -80,7 +79,7 @@ if __name__ == "__main__":
     x, y = get_ttt()
 
     # init network
-    layer_sizes = [18, *([128] * 10), 270]
+    layer_sizes = [18, *([720] * 2), 360, 180]
     params, wires = rand_network(param_key, layer_sizes)
 
     # train model
@@ -90,12 +89,15 @@ if __name__ == "__main__":
         key=train_key, 
         params=params, 
         wires=wires, 
-        epochs=4001, 
-        batch_size=512
+        epochs=40001, 
     )
 
+    # preds = predict_batch(params, wires, x, True)
+    # print(y)
+    # print(jnp.argmax(preds, axis=1))
+
     # compile model
-    ext_compile_to_c(params_trained, wires)
+    # ext_compile_to_c(params_trained, wires)
 
     # for instr in ext_logic(params, wires):
     #     print(ext_format(instr), end="")

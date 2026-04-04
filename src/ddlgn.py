@@ -132,8 +132,6 @@ def rand_network(key, sizes):
 def group_sum(x: jax.array, k: int, tau: float = 1):
     ''' Aggregation of Output Neurons '''
 
-    # assert x.shape[-1] % k == 0, f'Group Sum k mismatch! Input to group sum has shape: {x.shape}, k: {k}'
-    # return x.reshape(*x.shape[:-1], self.k, x.shape[-1] // self.k).sum(-1) / self.tau
     return x.reshape(*x.shape[:-1], k, x.shape[-1] // k).sum(-1) / tau
     
 
@@ -144,10 +142,8 @@ def predict(params, wires, inp, hard):
         outs_r = jnp.dot(right, active)
         active = gate(outs_l, outs_r, param, hard)
     
-    active = group_sum(active, k=9, tau=5)
+    active = group_sum(active, k=9, tau=10)
 
     return active
 
-
-# TODO what is this
 predict_batch = vmap(predict, in_axes=(None, None, 0, None))

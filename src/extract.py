@@ -134,5 +134,5 @@ def ext_compile_to_c(params, wires):
         for instr in ext_logic(params, wires):
             fout.write(ext_format(instr))
         fout.write(after)
-    print("wrote circuit to gate.c")
+    print("Wrote circuit to gate.c")
 
