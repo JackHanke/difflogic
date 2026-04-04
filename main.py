@@ -11,12 +11,23 @@ from src.extract import *
 from datasets.conway import get_conway
 from datasets.ttt import get_ttt
 
-# l2 loss
-def loss(params, wires, inp, out, hard):
-    preds = predict_batch(params, wires, inp, hard)
-    return jnp.mean(jnp.square(preds - out))
+# def loss(params, wires, inp, out, hard):
+#     ''' l2 loss '''
+#     preds = predict_batch(params, wires, inp, hard)
+#     return jnp.mean(jnp.square(preds - out))
 
-# TODO CSE
+def loss(params, wires, inp, out, hard):
+    ''' cross entropy loss '''
+    preds = predict_batch(params, wires, inp, hard)
+    losses = optax.softmax_cross_entropy_with_integer_labels(preds, out)
+    return jnp.mean(losses)
+
+def acc(params, wires, inp, out):
+    ''' compute the accuracy of predictions to the outputs '''
+    logits = predict_batch(params, wires, inp, True)
+    preds = jnp.argmax(logits, axis=1)
+    acc = jnp.sum(preds == out) / out.shape[0]
+    return acc
 
 @functools.partial(jit, static_argnums=(4,))
 def update_adamw(params, wires, x, y, opt, opt_state):
@@ -53,7 +64,8 @@ def train_adamw(
         time_epoch = time.time() - time_start
 
         print(f"Epoch ({i+1}/{epochs}) in {time_epoch:.3g} s/epoch", end="   \r")
-        if i % 1000 == 0: debug_loss(key_accuracy, params, wires, x, y)
+        
+        if i % 20 == 0: debug_loss(key_accuracy, params, wires, x, y)
         # if i % 10000 == 0: debug_params(params)
     return params
 
@@ -62,18 +74,22 @@ def debug_loss(key, params, wires, x, y):
 
     # TODO figure out why he gets the dataset again
     # x_test, y_test = get_conway()
-    x_test, y_test = get_ttt()
+    # x_test, y_test = get_ttt()
 
-    train_loss = loss(params, wires, x, y, False)
-    test_loss = loss(params, wires, x_test, y_test, False)
-    test_loss_hard = loss(params, wires, x_test, y_test, True)
+    # train_loss = loss(params, wires, x, y, False)
+    # test_loss = loss(params, wires, x_test, y_test, False)
+    # test_loss_hard = loss(params, wires, x_test, y_test, True)
 
-    preds = predict_batch(params, wires, x_test, False)
-    preds_hard = predict_batch(params, wires, x_test, True)
-    print("[", *[f"{x:.3g}" for x in preds[0:5].flatten().tolist()], "]", preds_hard[0:5].flatten(), y_test[0:5].flatten())
-    print(f"train_loss: {train_loss:.3g}", end="; ")
-    print(f"test_loss: {test_loss:.3g}", end="; ")
-    print(f"test_loss_hard: {test_loss_hard:.3g}")
+    train_acc = acc(params, wires, x, y)
+
+    # preds = predict_batch(params, wires, x_test, False)
+    # preds_hard = predict_batch(params, wires, x_test, True)
+    # print("[", *[f"{x:.3g}" for x in preds[0:5].flatten().tolist()], "]", preds_hard[0:5].flatten(), y_test[0:5].flatten())
+    print(f"train_acc: {train_acc*100:.3f} %")
+    # print(f"train_loss: {train_loss:.3g}", end="; ")
+    # print(f"test_loss: {test_loss:.3g}", end="; ")
+    # print(f"test_loss_hard: {test_loss_hard:.3g}")
+    
 
 def debug_params(params):
     for i, param in enumerate(params):
@@ -86,7 +102,6 @@ def debug_params(params):
             print()
 
 if __name__ == "__main__":
-
     SEED = 379009
     key = random.PRNGKey(SEED)
     param_key, train_key = random.split(key)
@@ -96,7 +111,7 @@ if __name__ == "__main__":
     x, y = get_ttt()
 
     # init network
-    layer_sizes = [9, *([128] * 17), 64, 32, 16, 8, 4, 2, 1]
+    layer_sizes = [18, *([256] * 24), 180]
     params, wires = rand_network(param_key, layer_sizes)
 
     # train model
@@ -106,7 +121,7 @@ if __name__ == "__main__":
         key=train_key, 
         params=params, 
         wires=wires, 
-        epochs=3001, 
+        epochs=4001, 
         batch_size=512
     )
 

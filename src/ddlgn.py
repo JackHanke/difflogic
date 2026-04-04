@@ -129,15 +129,25 @@ def rand_network(key, sizes):
     dims = zip(keys, sizes[:-1], sizes[1:])
     return list(zip(*[rand_layer(*dim) for dim in dims]))
 
+def group_sum(x: jax.array, k: int, tau: float = 1):
+    ''' Aggregation of Output Neurons '''
+
+    # assert x.shape[-1] % k == 0, f'Group Sum k mismatch! Input to group sum has shape: {x.shape}, k: {k}'
+    # return x.reshape(*x.shape[:-1], self.k, x.shape[-1] // self.k).sum(-1) / self.tau
+    return x.reshape(*x.shape[:-1], k, x.shape[-1] // k).sum(-1) / tau
+    
+
 def predict(params, wires, inp, hard):
     active = inp
     for param, (left, right) in zip(params, wires):
         outs_l = jnp.dot(left, active)
         outs_r = jnp.dot(right, active)
         active = gate(outs_l, outs_r, param, hard)
+    
+    active = group_sum(active, k=9, tau=5)
+
     return active
 
-# TODO Aggregation of Output Neurons
 
 # TODO what is this
 predict_batch = vmap(predict, in_axes=(None, None, 0, None))

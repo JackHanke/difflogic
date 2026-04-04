@@ -127,9 +127,9 @@ def ext_alpha_rename(instrs, root):
     return out
 
 def ext_compile_to_c(params, wires):
-    with open("gate.c.template", "r") as fin:
+    with open("src/gate.c.template", "r") as fin:
         before, after = fin.read().split("    {{ logic }}\n")
-    with open("gate.c", "w") as fout:
+    with open("src/gate.c", "w") as fout:
         fout.write(before)
         for instr in ext_logic(params, wires):
             fout.write(ext_format(instr))
